@@ -4,7 +4,7 @@ from tkinter.scrolledtext import ScrolledText
 import asyncio
 import threading
 import queue
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
 import os
 
 # Just scrapp withouth api https://github.com/Kisspeace/accless-tg-scraper
@@ -41,6 +41,9 @@ async def scrape_channels(channellist_file: str, offset: int, log_callback) -> s
 
     # Plik wyjściowy do zapisu
     with open(output_file, "w", encoding="utf-8") as outfile:
+        # Dodajemy nagłówek na samym początku
+        outfile.write(f"###Wpisy z dnia {date_str}\n\n")
+
         for channel in channels:
             # Wysyłamy log do GUI
             log_callback(f"Pobieranie kanału: {channel}")
@@ -205,8 +208,9 @@ class TelegramScraperGUI:
         self.log_queue.put(message)
 
     def process_log_queue(self):
-
-        #Obsługuje nowe logi z kolejki.
+        """
+        Obsługuje nowe logi z kolejki.
+        """
         try:
             while True:
                 msg = self.log_queue.get_nowait()
