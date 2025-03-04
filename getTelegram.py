@@ -4,20 +4,20 @@ from tkinter.scrolledtext import ScrolledText
 import asyncio
 import threading
 import queue
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
 import os
 
-# Just scrapp withouth api https://github.com/Kisspeace/accless-tg-scraper
 from accless_tg_scraper import TgScraper
 
-
-async def scrape_channels(channellist_file: str, offset: int, log_callback) -> str:
+# --- Zmiana: przekazujemy obiekt event, który sygnalizuje przerwanie.
+async def scrape_channels(channellist_file: str, offset: int, log_callback, stop_event: threading.Event) -> str:
     """
     Asynchroniczna funkcja pobierająca posty z kanałów.
     offset = 0 -> dziś
     offset = 1 -> wczoraj
     
     log_callback: funkcja do przekazywania komunikatów do GUI
+    stop_event: event sygnalizujący przerwanie (z wątku GUI).
     """
     # Wylicza wybraną datę (dzisiejsza lub wczorajsza)
     selected_date = date.today() - timedelta(days=offset)
@@ -41,7 +41,15 @@ async def scrape_channels(channellist_file: str, offset: int, log_callback) -> s
 
     # Plik wyjściowy do zapisu
     with open(output_file, "w", encoding="utf-8") as outfile:
+        # Dodajemy nagłówek
+        outfile.write(f"###Wpisy z dnia {date_str}\n\n")
+
         for channel in channels:
+            # --- Sprawdzamy czy nastąpiło żądanie przerwania
+            if stop_event.is_set():
+                log_callback("[INFO] Przerwano pobieranie postów.")
+                break
+
             # Wysyłamy log do GUI
             log_callback(f"Pobieranie kanału: {channel}")
             outfile.write(f"Kanał: {channel}\n")
@@ -62,6 +70,8 @@ async def scrape_channels(channellist_file: str, offset: int, log_callback) -> s
                 outfile.write(f"Pobrano postów: {len(selected_posts)}.\n")
 
                 for post in selected_posts:
+                    # --- Ewentualnie możemy też w pętli sprawdzać stop_event,
+                    #     jeżeli zależy Ci na jeszcze "dokładniejszym" zatrzymaniu.
                     post_info = f"{post.url} : {post.content}"
                     log_callback(post_info)
                     outfile.write(post_info + "\n")
@@ -76,13 +86,13 @@ async def scrape_channels(channellist_file: str, offset: int, log_callback) -> s
     return output_file
 
 
-def run_scraping(channellist_file: str, offset: int, log_callback):
+def run_scraping(channellist_file: str, offset: int, log_callback, stop_event: threading.Event):
     """
     Funkcja wywołująca asynchroniczny scrape_channels w sposób synchroniczny
     (z użyciem asyncio.run). Całość będzie uruchamiana w osobnym wątku, żeby nie blokować GUI.
     """
     try:
-        output_file = asyncio.run(scrape_channels(channellist_file, offset, log_callback))
+        output_file = asyncio.run(scrape_channels(channellist_file, offset, log_callback, stop_event))
         return output_file
     except Exception as e:
         # Błędy do GUI
@@ -106,6 +116,9 @@ class TelegramScraperGUI:
 
         # Ustawia, że co 100 ms odczytuje logi z kolejki
         self.master.after(100, self.process_log_queue)
+
+        # --- Zmienna informująca o tym, że chcemy przerwać pobieranie:
+        self.stop_event = threading.Event()
 
         # ===== UI: Wybór pliku =====
         self.file_frame = tk.LabelFrame(master, text="Plik z kanałami")
@@ -142,7 +155,11 @@ class TelegramScraperGUI:
 
         # ===== UI: Przycisk Start =====
         self.start_button = tk.Button(master, text="Rozpocznij pobieranie", command=self.start_scraping)
-        self.start_button.pack(padx=10, pady=10)
+        self.start_button.pack(padx=10, pady=5)
+
+        # --- UI: Przycisk Przerwij
+        self.stop_button = tk.Button(master, text="Przerwij", command=self.stop_scraping)
+        self.stop_button.pack(padx=10, pady=5)
 
         # ===== UI: Pole tekstowe na logi =====
         self.log_frame = tk.LabelFrame(master, text="Logi (co jest pobierane)")
@@ -174,6 +191,9 @@ class TelegramScraperGUI:
 
         offset = self.date_offset.get()
 
+        # --- Resetujemy event "stop" gdy zaczynamy nowe pobieranie
+        self.stop_event.clear()
+
         # Uruchamia wątek roboczy, w którym wykonamy run_scraping
         thread = threading.Thread(
             target=self.scrape_in_thread,
@@ -182,17 +202,30 @@ class TelegramScraperGUI:
         )
         thread.start()
 
+    # --- Metoda wywoływana po naciśnięciu "Przerwij"
+    def stop_scraping(self):
+        """
+        Ustawia event, aby przerwać pobieranie.
+        """
+        self.stop_event.set()
+
     def scrape_in_thread(self, channellist_file, offset):
         """
         Funkcja uruchamiana w osobnym wątku.
         """
         try:
-            output_file = run_scraping(channellist_file, offset, self.log_callback)
-            # Po zakończeniu – w wątku głównym pokaż komunikat
-            self.master.after(
-                0,
-                lambda: messagebox.showinfo("Sukces!", f"Zapisano posty w pliku: {output_file}")
-            )
+            output_file = run_scraping(channellist_file, offset, self.log_callback, self.stop_event)
+            # Po zakończeniu – w wątku głównym pokaż komunikat, tylko jeśli faktycznie coś pobrano
+            if not self.stop_event.is_set():
+                self.master.after(
+                    0,
+                    lambda: messagebox.showinfo("Sukces!", f"Zapisano posty w pliku: {output_file}")
+                )
+            else:
+                self.master.after(
+                    0,
+                    lambda: messagebox.showinfo("Przerwano", "Pobieranie zostało przerwane.")
+                )
         except Exception as e:
             # W razie błędu – w wątku głównym pokaż komunikat
             self.master.after(
@@ -205,8 +238,9 @@ class TelegramScraperGUI:
         self.log_queue.put(message)
 
     def process_log_queue(self):
-
-        #Obsługuje nowe logi z kolejki.
+        """
+        Obsługuje nowe logi z kolejki.
+        """
         try:
             while True:
                 msg = self.log_queue.get_nowait()
@@ -226,4 +260,7 @@ def main():
 
 
 if __name__ == "__main__":
+    # Aby uniknąć okna konsoli w Windows, zapisz plik jako .pyw
+    # lub uruchamiaj go przez pythonw.exe, np.:
+    # pythonw.exe twoj_skrypt.pyw
     main()
