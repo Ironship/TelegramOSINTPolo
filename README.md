@@ -85,7 +85,7 @@ Aplikacja służy do pobierania postów z kanałów Telegrama i zapisywania ich 
 *   Upewnij się, że masz stabilne połączenie z Internetem podczas pobierania postów.
 *   W przypadku bardzo dużej liczby kanałów lub postów, pobieranie może zająć więcej czasu.
 *   Jeśli wystąpi błąd, sprawdź treść komunikatu w polu "Logi" i upewnij się, że podana nazwa kanału jest poprawna.
-*   Program korzysta z biblioteki `accless-tg-scraper`, która działa bez używania oficjalnego API Telegrama.
+*   Program korzysta z biblioteki `accless-tg-scraper`, która działa bez używania oficjalnego API Telegrama. https://github.com/Kisspeace/accless-tg-scraper
 
 ##  PAMIĘTAJ ŻE WYŁĄCZNIE NA TOBIE LEŻY ODPOWIEDZIALNOŚĆ ZA SPRAWDZENIE ŹRÓDEŁ. NUMERKI PRZY TEKŚCIE (1) TO LINKI DO CYTATÓW WYKORZYSTANYCH PRZEZ LLM. WRAZ Z TEKSTEM ZAWARTE SĄ LINKI Z ADRESEM DO POSTA (2) NA TELEGRAM
 ![image](https://github.com/user-attachments/assets/3779eb4f-2f3a-4b82-a3e4-1170598bed5f)
