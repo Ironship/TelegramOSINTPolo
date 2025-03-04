@@ -40,7 +40,7 @@ jobs:
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Token do tworzenia Release
+          GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}  # Token do tworzenia Release
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
