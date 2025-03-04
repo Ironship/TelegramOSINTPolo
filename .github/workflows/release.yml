@@ -1,9 +1,14 @@
-name: Build and Release (PyInstaller - Risky)
+name: Build and Release (PyInstaller)
 
 on:
   push:
     branches:
-      - main  # Trigger on pushes to the main branch
+      - main  # Or your development branch
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
   build-and-release:
@@ -12,6 +17,10 @@ jobs:
     steps:
       - name: Check out the code
         uses: actions/checkout@v3
+        with:
+         ref: ${{ github.ref_name }}
+         #If is not a tag push fetch main branch
+         if: ${{ github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/') }}
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -27,22 +36,22 @@ jobs:
         run: |
           pyinstaller --onefile --noconsole getTelegram.py
 
-      - name: Get Tag Name (Dynamically)
+      - name: Get Tag Name (Conditional)
         id: get_tag
+        if: ${{ github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/') }} # Only run on branch pushes
         run: |
           echo "tag_name=v$(date +%Y%m%d%H%M%S)" >> $GITHUB_ENV
-          #Alternative: tag_name=v$(git describe --tags --abbrev=0)
 
       - name: Create GitHub Release
         id: create_release
         uses: actions/create-release@v1
         with:
-          tag_name: ${{ env.tag_name }}
-          release_name: "Release ${{ env.tag_name }}"
+          tag_name: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') && github.ref_name || env.tag_name }} # Conditionally use tag_name or dynamic tag
+          release_name: "Release ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') && github.ref_name || env.tag_name }}"
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_UPLOAD_TOKEN }}
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
@@ -52,4 +61,4 @@ jobs:
           asset_name: getTelegram.exe
           asset_content_type: application/octet-stream
         env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_UPLOAD_TOKEN }}
