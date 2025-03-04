@@ -15,7 +15,8 @@ Aplikacja służy do pobierania postów z kanałów Telegrama i zapisywania ich 
 ## 2. Uruchomienie aplikacji:
 
 *   Po uruchomieniu aplikacji zobaczysz główne okno programu.
- ![{F0F26D86-B0EF-46B2-822D-FE68EE0E1E27}](https://github.com/user-attachments/assets/04bf1421-ca6f-4ef3-bce8-47b24e52986d)
+![{549E629D-DBF8-4ECE-A023-68DC30D25171}](https://github.com/user-attachments/assets/69205014-510a-4454-bc36-bcff7c2f230e)
+
 
 
 ## 3. Konfiguracja:
