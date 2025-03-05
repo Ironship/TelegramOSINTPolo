@@ -1,0 +1,4 @@
+/.venv/**
+/*.txt
+!/exampleList.txt
+!/requirements*.txt
