@@ -1,4 +1,52 @@
-/.venv/**
-/*.txt
-!/exampleList.txt
-!/requirements*.txt
+# --- Python ---
+# Byte-compiled / optimized files / DLLs
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.spec # PyInstaller spec files
+
+# Virtual environments (common names)
+.env
+.venv
+env/
+venv/
+ENV/
+VENV/
+*/.venv/
+*/env/
+*/venv/
+
+# IDE / Editor / OS specific files
+.idea/          # IntelliJ IDEA / PyCharm
+.vscode/        # Visual Studio Code
+*.swp           # Vim swap files
+.DS_Store       # macOS
+Thumbs.db       # Windows
+
+# Log files (if generated)
+*.log
+
+# --- Specific to the TelegramOSINTPolo project ---
+
+# Generated output files with posts
+# Ignores files starting with "output_" and ending with ".txt"
+output_*.txt
+
+# Archive directory for old output files
+# Ignores the entire 'archive' directory in the project root
+/archive/*
+
+# User channel list files in the channelslists directory
+# Ignores all .txt files inside channelslists.
+# Consider leaving an example file in the repository (e.g., example.txt)
+# and unignoring it using: !channelslists/example.txt
+channelslists/*.txt
+
+# --- Optionally ---
+# Files with secrets or sensitive configuration (if you add any)
+# e.g. secrets.ini, config.yaml

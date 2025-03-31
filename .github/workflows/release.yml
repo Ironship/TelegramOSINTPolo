@@ -17,8 +17,6 @@ jobs:
     steps:
       - name: Check out the code
         uses: actions/checkout@v3
-        with:
-          ref: ${{ github.ref_name }}
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -27,12 +25,29 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Build with PyInstaller
-        run: pyinstaller --onefile getTelegram.py
+      - name: Build with PyInstaller (--onedir)
+        run: |
+          pyinstaller --onedir --noconfirm --clean `
+            --add-data "channelslists;channelslists" `
+            --add-data "my_telegram_scrapper;my_telegram_scrapper" `
+            --add-data "src;src" `
+            getTelegram.py
+
+      - name: Prepare Release Artifact Name
+        id: artifact_name
+        run: |
+          $tagName = "${{ github.ref_name }}"
+          $zipFileName = "getTelegram-${tagName}.zip"
+          echo "zip_file_name=$zipFileName" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+        shell: pwsh
+
+      - name: Create ZIP Archive
+        run: Compress-Archive -Path dist/getTelegram/* -DestinationPath dist/${{ steps.artifact_name.outputs.zip_file_name }}
+        shell: pwsh
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
@@ -46,13 +61,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Release Asset
+      - name: Upload Release Asset (ZIP)
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/getTelegram.exe
-          asset_name: getTelegram.exe
-          asset_content_type: application/octet-stream
+          asset_path: dist/${{ steps.artifact_name.outputs.zip_file_name }}
+          asset_name: ${{ steps.artifact_name.outputs.zip_file_name }}
+          asset_content_type: application/zip
         env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,94 +1,93 @@
-# Instrukcja obsługi aplikacji "Pobieranie postów z Telegrama"
+# TODO:
+* LIST OF CHANNELS ARE RANDOM FOR NOW - TODO REVIEW their correct political BIAS
+* Workflow for deployment .exe files requires fix. I dont have time for that. Maybe later. Sorry
 
-Aplikacja służy do pobierania postów z kanałów Telegrama i zapisywania ich do plików tekstowych.
+# User Manual for the "Download Telegram Posts" Application
 
-## 1. Przygotowanie listy kanałów:
+This application is used to download posts from Telegram channels and save them to text files.
 
-*   **Rekomendacja:** Utwórz *dwie* oddzielne listy kanałów w plikach `.txt`. Możesz je podzielić tematycznie (np. "wiadomości", "sport", "technologie") lub według *political bias* (np. "prorosyjskie", "proukraińskie", "neutralne"). Taki podział ułatwi późniejszą analizę.
-*   Każdy kanał powinien być w osobnej linii, w formacie pełnego adresu URL (np. `https://t.me/nazwa_kanalu`) lub samej nazwy (np. `nazwa_kanalu`).  ***Nie* dodawaj znaku '/' na końcu nazwy kanału**.
-*   Jeśli masz kanały w formacie pełnego URL, program automatycznie usunie wszystko przed ostatnim '/' i pobierze samą nazwę kanału.
-*   Do programu dołączona jest przykładowa lista ponad 160 kanałów, ale to są jedynie przykładowe adresy. Prawdziwą listę musisz stworzyć sobie sam.
+## 1. Preparing the Channel List:
+
+* **Recommendation:** Create *two* separate channel lists in `.txt` files. You can divide them thematically (e.g., "news", "sport", "technology") or by *political bias* (e.g., "pro-Russian", "pro-Ukrainian", "neutral"). Such division will facilitate later analysis.
+* Each channel should be on a separate line, either as a full URL (e.g., `https://t.me/channel_name`) or just the name (e.g., `channel_name`). ***Do not* add a '/' character at the end of the channel name**.
+* If you have channels in the full URL format, the program will automatically remove everything before the last '/' and retrieve only the channel name.
+* The program includes a sample list of over 160 channels, but these are just examples. You need to create your actual list yourself[cite: 2, 3, 4, 5, 6].
 
 ![{AD1F8859-3306-4393-9B14-A80DD1DE3A03}](https://github.com/user-attachments/assets/36ba23a4-fad8-4935-9bdf-cbc9ccbe3f8a)
 
 
-## 2. Uruchomienie aplikacji:
+## 2. Launching the Application:
 
-*   Po uruchomieniu aplikacji zobaczysz główne okno programu.
-![{549E629D-DBF8-4ECE-A023-68DC30D25171}](https://github.com/user-attachments/assets/69205014-510a-4454-bc36-bcff7c2f230e)
+* After launching the application, you will see the main program window.
+<img width="671" alt="{A47CC81A-BCCB-4408-B63E-3492D3A2BB2C}" src="https://github.com/user-attachments/assets/582817d3-d351-423c-9f15-15c93bb5aa73" />
 
 
 
-## 3. Konfiguracja:
 
-*   **Wybór pliku z kanałami:**
-    *   Kliknij przycisk "Przeglądaj...".
-    *   W oknie dialogowym wybierz plik `.txt` zawierający listę kanałów.
-    *   Ścieżka do wybranego pliku pojawi się w polu tekstowym.
+## 3. Configuration:
 
-*   **Wybór daty:**
-    *   Wybierz, czy chcesz pobrać posty z "Dzisiaj" (domyślnie) czy z "Wczoraj", zaznaczając odpowiedni przycisk radiowy.
+* **Select Channel File:**
+    * Click the "Browse..." button.
+    * In the dialog window, select the `.txt` file containing the channel list.
+    * The path to the selected file will appear in the text field.
 
-## 4. Pobieranie postów:
+* **Select Date:**
+    * Choose the desired date or date range using the provided options (Specific Date, Date Range, Today, Yesterday, All).
 
-*   Kliknij przycisk "Rozpocznij pobieranie".
-*   Aplikacja rozpocznie pobieranie postów z kanałów znajdujących się w wybranym pliku.
-*   **Logi (co się dzieje):** W dolnej części okna, w polu "Logi", będą wyświetlane komunikaty informujące o postępach:
-    *   Nazwa aktualnie pobieranego kanału.
-    *   Liczba pobranych postów z danego kanału.
-    *   Treść pobranych postów (wraz z linkiem).
-    *   Ewentualne komunikaty o błędach.
-*   Proces pobierania może chwilę potrwać, w zależności od liczby kanałów i postów. Nie zamykaj okna programu, dopóki proces się nie zakończy.
+## 4. Downloading Posts:
 
-## 5. Zapis wyników:
+* Click the relevant "Download..." button based on your date selection.
+* The application will start downloading posts from the channels listed in the selected file.
+* **Logs (what's happening):** In the lower part of the window, in the "Logs" field, informational messages about the progress will be displayed:
+    * The name of the currently downloaded channel.
+    * The number of posts downloaded from that channel.
+    * The content of the downloaded posts (including the link).
+    * Any error messages.
+* The download process may take a while, depending on the number of channels and posts. Do not close the program window until the process is complete. You can use the "STOP SCRAPING" button if needed.
 
-*   Po zakończeniu pobierania, aplikacja automatycznie zapisze posty do pliku `.txt`.
-*   Nazwa pliku wyjściowego będzie miała format: `output_NAZWA-PLIKU-Z-KANALAMI_RRRR-MM-DD.txt`, gdzie:
-    *   `NAZWA-PLIKU-Z-KANALAMI` to nazwa pliku, który wybrałeś z listą kanałów (bez rozszerzenia `.txt`).
-    *   `RRRR-MM-DD` to data, z której pobrano posty (rok-miesiąc-dzień).
-*   Plik wyjściowy zostanie utworzony w tym samym katalogu, w którym znajduje się plik wykonywalny aplikacji (.exe) lub skrypt Pythona.
-*   Komunikat o sukcesie lub błędzie pojawi się w okienku.
+## 5. Saving Results:
 
-## 6. Analiza danych z NotebookLM:
+* After the download is complete (or stopped), the application automatically saves the posts to `.txt` file(s).
+* The output filename format is: `output_FILENAME-WITH-CHANNELS_YYYY-MM-DD.txt`, where:
+    * `FILENAME-WITH-CHANNELS` is the name of the file you selected with the channel list (without the `.txt` extension).
+    * `YYYY-MM-DD` is the date from which the posts were downloaded (year-month-day). For range or 'all' modes, multiple files might be created/updated.
+* The output file(s) will be created in the same directory where the application's executable (.exe) or Python script is located. Existing `output_*.txt` files will be moved to an `archive` subfolder before a new scrape starts.
+* A success, interruption, or error message will appear in a pop-up window.
 
-*   **Kluczowy Krok:** Po pobraniu danych (plików `output_*.txt`), możesz skorzystać z *NotebookLM* od Google (https://notebooklm.google.com) , aby efektywnie analizować zgromadzone informacje. NotebookLM działa jak RAG (Retrieval-Augmented Generation), co oznacza, że możesz "rozmawiać" ze swoimi danymi.
+## 6. Data Analysis with NotebookLM:
 
-   * Istnieją dwie wersje notebooka. Darmowa wersja spokojnie wystarcza, ale nikt nie broni kupić wersję Plus.
-       > W wersji NotebookLM możesz mieć do 100 notatników i w każdym z nich do 50 źródeł. Każde źródło może zawierać nawet pół miliona słów. Wszyscy użytkownicy na początek mają do wykorzystania 50 zapytań na czacie i mogą wygenerować 3 podsumowania audio.
+* **Key Step:** After downloading the data (the `output_*.txt` files), you can use Google's *NotebookLM* (https://notebooklm.google.com) to efficiently analyze the collected information. NotebookLM works like RAG (Retrieval-Augmented Generation), which means you can "talk" to your data.
+
+   * There are two versions of the notebook. The free version is perfectly sufficient, but no one is stopping you from buying the Plus version.
+       > In the NotebookLM version, you can have up to 100 notebooks, and each can contain up to 50 sources. Each source can contain up to half a million words. All users initially get 50 chat queries and can generate 3 audio summaries.
        >
-       > Jeśli przejdziesz na wersję NotebookLM Plus, te limity zwiększą się co najmniej 5-krotnie – do 500 notatników i 300 źródeł na notatnik. Wzrosną też dzienne limity zapytań – będziesz mieć możliwość zadania nawet 500 zapytań na czacie i wygenerowania 20 podsumowań audio każdego dnia. W przypadku udostępniania notatnika limit liczby źródeł się nie zmienia: zarówno Ty, jak i osoby, którym udostępnisz notatnik, będziecie mogli przesłać do niego maksymalnie 300 źródeł.
+       > If you upgrade to NotebookLM Plus, these limits increase at least 5-fold – to 500 notebooks and 300 sources per notebook. Daily query limits also increase – you will be able to ask up to 500 chat queries and generate 20 audio summaries each day. When sharing a notebook, the source limit does not change: both you and the people you share the notebook with can upload a maximum of 300 sources to it.
 
 ![{3BFABF80-1DF0-4C75-B817-88184E8B4240}](https://github.com/user-attachments/assets/5c66fa81-4d65-4c38-b97d-436fc4752983)
 
-       
+* **How to use NotebookLM:**
+    1.  Upload the downloaded `.txt` files to NotebookLM as sources.
+    2.  NotebookLM will process these files and allow you to ask questions in natural language about their content.
+    3.  You can ask for summaries, sentiment analysis, search for specific information, compare content from different channels, identify trends, and even generate new texts based on the downloaded data.
+    4.  Use the notebook to ask questions about the uploaded files.
 
-
-
-*   **Jak używać NotebookLM:**
-    1.  Prześlij pobrane pliki `.txt` do NotebookLM jako źródła.
-    2.  NotebookLM przetworzy te pliki i pozwoli Ci zadawać pytania w języku naturalnym dotyczące ich treści.
-    3.  Możesz poprosić o streszczenia, analizę sentymentu, wyszukiwanie konkretnych informacji, porównywanie treści z różnych kanałów, identyfikację trendów, a nawet generowanie nowych tekstów na podstawie pobranych danych.
-    4.  Używaj notatnika do zadawania pytań do przesłanych plików.
- 
  ![{3BDC503A-D6C4-47C2-87C1-7E3E075F5138}](https://github.com/user-attachments/assets/8f2c9535-5d6a-4776-a7bc-a738fcde6578)
 
 
-*   **Zalety analizy w NotebookLM (RAG):**
-    *   **Kontekst:** NotebookLM analizuje Twoje pytania w *kontekście* przesłanych danych. Odpowiedzi są oparte *bezpośrednio* na informacjach z plików, co minimalizuje ryzyko halucynacji (wymyślania informacji przez model językowy).
-    *   **Precyzja:** Możesz odwoływać się do konkretnych fragmentów tekstu, co ułatwia weryfikację informacji i śledzenie źródeł. NotebookLM potrafi wskazać, skąd pochodzi dana odpowiedź.
-    *   **Wydajność:** Nie musisz ręcznie przeszukiwać setek postów. NotebookLM robi to za Ciebie, oszczędzając Twój czas i wysiłek.
-    *   **Głębsza analiza:** Dzięki możliwości zadawania pytań i generowania podsumowań, możesz uzyskać znacznie głębszy wgląd w dane niż przy tradycyjnej analizie. Możesz odkrywać ukryte wzorce, powiązania i trendy, które inaczej mogłyby Ci umknąć.
-    *   **Interaktywność:** NotebookLM pozwala na dynamiczną interakcję z danymi. Możesz na bieżąco modyfikować swoje zapytania i uzyskiwać natychmiastowe odpowiedzi.
-    *   **Bezpieczeństwo:** NotebookLM, używając jako źródła informacji przesłanych plików, nie czerpie informacji z niepewnych źródeł.
+* **Advantages of Analysis in NotebookLM (RAG):**
+    * **Context:** NotebookLM analyzes your questions in the *context* of the uploaded data. Answers are based *directly* on information from the files, minimizing the risk of hallucinations (the language model inventing information).
+    * **Precision:** You can refer to specific text fragments, making it easier to verify information and track sources. NotebookLM can indicate where a particular answer comes from.
+    * **Efficiency:** You don't have to manually search through hundreds of posts. NotebookLM does it for you, saving your time and effort.
+    * **Deeper Analysis:** Thanks to the ability to ask questions and generate summaries, you can gain much deeper insights into the data than with traditional analysis. You can discover hidden patterns, connections, and trends that might otherwise be missed.
+    * **Interactivity:** NotebookLM allows dynamic interaction with data. You can modify your queries on the fly and get immediate answers.
+    * **Security:** NotebookLM, using the uploaded files as its source of information, does not draw information from uncertain sources.
 
-## Dodatkowe uwagi:
+## Additional Notes:
 
-*   Upewnij się, że masz stabilne połączenie z Internetem podczas pobierania postów.
-*   W przypadku bardzo dużej liczby kanałów lub postów, pobieranie może zająć więcej czasu.
-*   Jeśli wystąpi błąd, sprawdź treść komunikatu w polu "Logi" i upewnij się, że podana nazwa kanału jest poprawna.
-*   Program korzysta z biblioteki `accless-tg-scraper`, która działa bez używania oficjalnego API Telegrama. https://github.com/Kisspeace/accless-tg-scraper
+* Ensure you have a stable internet connection while downloading posts.
+* For a very large number of channels or posts, downloading may take longer. The 'Download All' option can be particularly time-consuming.
+* If an error occurs, check the message content in the "Logs" field and ensure the provided channel name is correct and the channel is publicly accessible via web view.
+* The program used the `accless-tg-scraper` library, which worked without using the official Telegram API by scraping the public web preview of channels. https://github.com/Kisspeace/accless-tg-scraper but after some considerations and understanding that updates are nowhere near I had to write my own scrapper from scratch but I still leave link to this repo to point where idea come from.
 
-##  PAMIĘTAJ ŻE WYŁĄCZNIE NA TOBIE LEŻY ODPOWIEDZIALNOŚĆ ZA SPRAWDZENIE ŹRÓDEŁ. NUMERKI PRZY TEKŚCIE (1) TO LINKI DO CYTATÓW WYKORZYSTANYCH PRZEZ LLM. WRAZ Z TEKSTEM ZAWARTE SĄ LINKI Z ADRESEM DO POSTA (2) NA TELEGRAM
+## REMEMBER THAT THE RESPONSIBILITY FOR VERIFYING SOURCES LIES SOLELY WITH YOU. THE NUMBERS NEXT TO THE TEXT (1) IN NOTEBOOKLM ARE LINKS TO QUOTATIONS USED BY THE LLM. THE OUTPUT FILES FROM THIS APPLICATION CONTAIN THE POST CONTENT AND A DIRECT LINK TO THE ORIGINAL POST (2) ON TELEGRAM FOR VERIFICATION.
 ![image](https://github.com/user-attachments/assets/3779eb4f-2f3a-4b82-a3e4-1170598bed5f)
-
-

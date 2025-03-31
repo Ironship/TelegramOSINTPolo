@@ -1,266 +1,93 @@
-import tkinter as tk
-from tkinter import filedialog, messagebox
-from tkinter.scrolledtext import ScrolledText
-import asyncio
-import threading
-import queue
-from datetime import date, timedelta
+# Main entry point for the Telegram Scraper application.
+# import tkinter as tk # OLD
+import customtkinter as ctk # NEW
+from tkinter import messagebox # Keep messagebox from standard tkinter
 import os
+import sys
+from pathlib import Path # Use pathlib for easier path handling
+import tkinter as tk # Potrzebne dla root_err w bloku except
 
-from accless_tg_scraper import TgScraper
 
-# --- Zmiana: przekazujemy obiekt event, który sygnalizuje przerwanie.
-async def scrape_channels(channellist_file: str, offset: int, log_callback, stop_event: threading.Event) -> str:
-    """
-    Asynchroniczna funkcja pobierająca posty z kanałów.
-    offset = 0 -> dziś
-    offset = 1 -> wczoraj
-    
-    log_callback: funkcja do przekazywania komunikatów do GUI
-    stop_event: event sygnalizujący przerwanie (z wątku GUI).
-    """
-    # Wylicza wybraną datę (dzisiejsza lub wczorajsza)
-    selected_date = date.today() - timedelta(days=offset)
-    date_str = selected_date.strftime("%Y-%m-%d")
-    
-    # Tworzy nazwę pliku wyjściowego: np. output_channellist_2025-03-04.txt
-    base_name = os.path.splitext(os.path.basename(channellist_file))[0]
-    output_file = f"output_{base_name}_{date_str}.txt"
+# --- Determine Base Directory ---
+# (Keep this section as is)
+if getattr(sys, 'frozen', False):
+    base_dir = Path(sys.executable).parent
+elif __file__:
+    base_dir = Path(__file__).parent
+else:
+    base_dir = Path.cwd()
 
-    # Wczytuje listę kanałów
+# --- Dynamically add project root and src to sys.path ---
+project_root = base_dir
+src_dir = project_root / 'src'
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+if str(src_dir) not in sys.path:
+    sys.path.insert(0, str(src_dir))
+
+# --- Set CustomTkinter Appearance ---
+ctk.set_appearance_mode("System") # Options: "System", "Light", "Dark"
+ctk.set_default_color_theme("blue") # Options: "blue", "green", "dark-blue"
+
+# --- Import GUI Component and Dependencies ---
+try:
+    from gui.main_window import TelegramScraperGUI
+    # (Keep other imports and the basic structure of the try/except block)
+    from scraper import run_scraping
+    from my_telegram_scrapper import SimpleScraperClient
+except ImportError as e:
+    project_root = base_dir # <-- DODANO TĘ LINIĘ, aby naprawić NameError
+    error_details = f"{e}\n\n"
+    error_details += f"Could not import required components.\n"
+    error_details += f"Please ensure 'src' and 'my_telegram_scrapper' directories exist relative to the executable or script:\n{project_root}\n"
+    error_details += "Also, verify that all dependencies (including customtkinter) from requirements.txt are installed."
+    print(f"Fatal Error: {error_details}")
+    # Attempt to show a GUI error message (using standard tkinter temporarily if ctk fails)
     try:
-        with open(channellist_file, "r", encoding="utf-8") as infile:
-            lines = [line.strip() for line in infile if line.strip()]
-            channels = []
-            for line in lines:
-                line = line.rstrip('/')
-                channel_name = line.rsplit('/', 1)[-1]
-                channels.append(channel_name)
-    except FileNotFoundError:
-        raise FileNotFoundError("Nie znaleziono pliku z listą kanałów.")
-
-    # Plik wyjściowy do zapisu
-    with open(output_file, "w", encoding="utf-8") as outfile:
-        # Dodajemy nagłówek
-        outfile.write(f"###Wpisy z dnia {date_str}\n\n")
-
-        for channel in channels:
-            # --- Sprawdzamy czy nastąpiło żądanie przerwania
-            if stop_event.is_set():
-                log_callback("[INFO] Przerwano pobieranie postów.")
-                break
-
-            # Wysyłamy log do GUI
-            log_callback(f"Pobieranie kanału: {channel}")
-            outfile.write(f"Kanał: {channel}\n")
-
-            try:
-                telegram = TgScraper()
-                page = await telegram.get_posts_page(channel)
-                posts = page.posts
-
-                # Filtrowanie postów z wybranej daty
-                selected_posts = [p for p in posts if p.timestamp.date() == selected_date]
-
-                msg = (
-                    f"Pobrano {len(posts)} postów z kanału {channel}, "
-                    f"z czego wybranych: {len(selected_posts)}."
-                )
-                log_callback(msg)
-                outfile.write(f"Pobrano postów: {len(selected_posts)}.\n")
-
-                for post in selected_posts:
-                    # --- Ewentualnie możemy też w pętli sprawdzać stop_event,
-                    #     jeżeli zależy Ci na jeszcze "dokładniejszym" zatrzymaniu.
-                    post_info = f"{post.url} : {post.content}"
-                    log_callback(post_info)
-                    outfile.write(post_info + "\n")
-
-                outfile.write("\n")
-
-            except Exception as e:
-                msg = f"Wystąpił błąd podczas pobierania kanału {channel}: {e}"
-                log_callback(msg)
-                outfile.write(msg + "\n\n")
-
-    return output_file
-
-
-def run_scraping(channellist_file: str, offset: int, log_callback, stop_event: threading.Event):
-    """
-    Funkcja wywołująca asynchroniczny scrape_channels w sposób synchroniczny
-    (z użyciem asyncio.run). Całość będzie uruchamiana w osobnym wątku, żeby nie blokować GUI.
-    """
+        # Use a temporary standard Tk root for the error if ctk fails early
+        root_err = tk.Tk()
+        root_err.withdraw()
+        messagebox.showerror("Startup Error", f"Failed to load application components.\n\n{error_details}")
+        root_err.destroy()
+    except Exception: # Catch broader exceptions here, including tk.TclError
+        print("GUI error: Could not display the error message box.")
+    sys.exit(1)
+except Exception as e:
+    # Catch any other unexpected error during initial imports
+    print(f"Fatal Error during startup: {e}")
     try:
-        output_file = asyncio.run(scrape_channels(channellist_file, offset, log_callback, stop_event))
-        return output_file
-    except Exception as e:
-        # Błędy do GUI
-        log_callback(f"[BŁĄD] {str(e)}")
-        raise
+        # Use a temporary standard Tk root for the error if ctk fails early
+        root_err = tk.Tk()
+        root_err.withdraw()
+        messagebox.showerror("Startup Error", f"An unexpected error occurred during initialization:\n\n{e}")
+        root_err.destroy()
+    except Exception:
+        pass # Console print is the fallback
+    sys.exit(1)
 
-
-class TelegramScraperGUI:
-    def __init__(self, master):
-        self.master = master
-        self.master.title("Pobieranie postów z Telegrama")
-
-        # Zmienna na ścieżkę do pliku z listą kanałów
-        self.channellist_path = tk.StringVar()
-
-        # 0 - dziś, 1 - wczoraj
-        self.date_offset = tk.IntVar(value=0)
-
-        # Kolejka do przekazywania logów z wątku roboczego do GUI
-        self.log_queue = queue.Queue()
-
-        # Ustawia, że co 100 ms odczytuje logi z kolejki
-        self.master.after(100, self.process_log_queue)
-
-        # --- Zmienna informująca o tym, że chcemy przerwać pobieranie:
-        self.stop_event = threading.Event()
-
-        # ===== UI: Wybór pliku =====
-        self.file_frame = tk.LabelFrame(master, text="Plik z kanałami")
-        self.file_frame.pack(padx=10, pady=10, fill="x")
-
-        self.file_label = tk.Label(self.file_frame, text="Wybierz plik z listą kanałów:")
-        self.file_label.pack(anchor="w", padx=5, pady=5)
-
-        self.file_entry = tk.Entry(self.file_frame, textvariable=self.channellist_path, width=50)
-        self.file_entry.pack(side="left", padx=5, pady=5)
-
-        self.browse_button = tk.Button(self.file_frame, text="Przeglądaj...", command=self.open_file_dialog)
-        self.browse_button.pack(side="left", padx=5, pady=5)
-
-        # ===== UI: Wybór daty (dziś/wczoraj) =====
-        self.date_frame = tk.LabelFrame(master, text="Zakres dat")
-        self.date_frame.pack(padx=10, pady=10, fill="x")
-
-        self.today_radiobutton = tk.Radiobutton(
-            self.date_frame,
-            text="Dzisiaj",
-            variable=self.date_offset,
-            value=0
-        )
-        self.today_radiobutton.pack(anchor="w", padx=5, pady=2)
-
-        self.yesterday_radiobutton = tk.Radiobutton(
-            self.date_frame,
-            text="Wczoraj",
-            variable=self.date_offset,
-            value=1
-        )
-        self.yesterday_radiobutton.pack(anchor="w", padx=5, pady=2)
-
-        # ===== UI: Przycisk Start =====
-        self.start_button = tk.Button(master, text="Rozpocznij pobieranie", command=self.start_scraping)
-        self.start_button.pack(padx=10, pady=5)
-
-        # --- UI: Przycisk Przerwij
-        self.stop_button = tk.Button(master, text="Przerwij", command=self.stop_scraping)
-        self.stop_button.pack(padx=10, pady=5)
-
-        # ===== UI: Pole tekstowe na logi =====
-        self.log_frame = tk.LabelFrame(master, text="Logi (co jest pobierane)")
-        self.log_frame.pack(padx=10, pady=10, fill="both", expand=True)
-
-        self.log_text = ScrolledText(self.log_frame, wrap="word", height=10)
-        self.log_text.pack(fill="both", expand=True, padx=5, pady=5)
-
-    def open_file_dialog(self):
-        """
-        Otwiera okno dialogowe do wyboru pliku z listą kanałów i ustawia ścieżkę w self.channellist_path.
-        """
-        filename = filedialog.askopenfilename(
-            title="Wybierz plik z listą kanałów",
-            filetypes=(("Plik tekstowy", "*.txt"), ("Wszystkie pliki", "*.*"))
-        )
-        if filename:
-            self.channellist_path.set(filename)
-
-    def start_scraping(self):
-        """
-        Metoda wywoływana po naciśnięciu przycisku 'Rozpocznij pobieranie'.
-        Uruchamiamy wątek roboczy, by nie blokować GUI.
-        """
-        channellist_file = self.channellist_path.get().strip()
-        if not channellist_file:
-            messagebox.showwarning("Brak pliku", "Proszę wybrać plik z listą kanałów.")
-            return
-
-        offset = self.date_offset.get()
-
-        # --- Resetujemy event "stop" gdy zaczynamy nowe pobieranie
-        self.stop_event.clear()
-
-        # Uruchamia wątek roboczy, w którym wykonamy run_scraping
-        thread = threading.Thread(
-            target=self.scrape_in_thread,
-            args=(channellist_file, offset),
-            daemon=True
-        )
-        thread.start()
-
-    # --- Metoda wywoływana po naciśnięciu "Przerwij"
-    def stop_scraping(self):
-        """
-        Ustawia event, aby przerwać pobieranie.
-        """
-        self.stop_event.set()
-
-    def scrape_in_thread(self, channellist_file, offset):
-        """
-        Funkcja uruchamiana w osobnym wątku.
-        """
-        try:
-            output_file = run_scraping(channellist_file, offset, self.log_callback, self.stop_event)
-            # Po zakończeniu – w wątku głównym pokaż komunikat, tylko jeśli faktycznie coś pobrano
-            if not self.stop_event.is_set():
-                self.master.after(
-                    0,
-                    lambda: messagebox.showinfo("Sukces!", f"Zapisano posty w pliku: {output_file}")
-                )
-            else:
-                self.master.after(
-                    0,
-                    lambda: messagebox.showinfo("Przerwano", "Pobieranie zostało przerwane.")
-                )
-        except Exception as e:
-            # W razie błędu – w wątku głównym pokaż komunikat
-            self.master.after(
-                0,
-                lambda: messagebox.showerror("Błąd", str(e))
-            )
-
-    def log_callback(self, message: str):
-        # Wrzuca wiadomości do kolejki logów.
-        self.log_queue.put(message)
-
-    def process_log_queue(self):
-        """
-        Obsługuje nowe logi z kolejki.
-        """
-        try:
-            while True:
-                msg = self.log_queue.get_nowait()
-                # Wstawia wiadomość do pola tekstowego
-                self.log_text.insert(tk.END, msg + "\n")
-                self.log_text.see(tk.END)  # przewijamy na dół
-        except queue.Empty:
-            pass
-        # Wywołanie ponownie za 100ms
-        self.master.after(100, self.process_log_queue)
-
-
+# --- Main Execution Function ---
 def main():
-    root = tk.Tk()
-    app = TelegramScraperGUI(root)
-    root.mainloop()
+    """Sets up and runs the CustomTkinter application."""
+    # root = tk.Tk() # OLD
+    root = ctk.CTk() # NEW
+    try:
+        # Pass the base_dir (as a string or Path object) to the GUI
+        app = TelegramScraperGUI(root, str(base_dir)) # Pass as string if GUI expects it
+        root.minsize(600, 700) # Adjusted minsize slightly
+        root.mainloop()
+    except Exception as e:
+        print(f"Fatal Error running the application: {e}")
+        # Attempt to show error message if GUI fails during runtime
+        try:
+             # customtkinter windows might not have winfo_exists in the same way
+             # Just try showing the error
+             messagebox.showerror("Application Error", f"An unexpected error occurred while running:\n\n{e}")
+             if root: # Check if root object exists
+                 root.destroy()
+        except Exception: # Catch broader exceptions
+            pass # Avoid errors if the window is already gone
+        sys.exit(1)
 
-
+# --- Script Entry Point ---
 if __name__ == "__main__":
-    # Aby uniknąć okna konsoli w Windows, zapisz plik jako .pyw
-    # lub uruchamiaj go przez pythonw.exe, np.:
-    # pythonw.exe twoj_skrypt.pyw
     main()
