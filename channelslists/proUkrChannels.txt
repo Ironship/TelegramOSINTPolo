@@ -1,51 +1,36 @@
+# LIST NAME: Pro-Ukrainian Channels
+# POLITICAL BIAS: PRO-UKRAINIAN
+# DESCRIPTION: Telegram channels that report from a pro-Ukrainian perspective on
+#   the Russia-Ukraine conflict. They include Ukrainian military units, civilian
+#   resistance groups, IT Army volunteers, local oblast administrations, and
+#   journalists or activists documenting the defence of Ukraine. Content frames
+#   Ukrainian armed resistance positively and is critical of Russian military
+#   operations and occupation.
+# NOTE: Lines starting with # are ignored by the scraper.
+
 https://t.me/slvn_pomet
-
 https://t.me/dontstopwar
-
 https://t.me/Operatyvnyi_Donbas
-
 https://t.me/ukrainian_militant
-
 https://t.me/batalionmonako
-
 https://t.me/karymat
-
 https://t.me/Ateobreaking
-
 https://t.me/BaluHUB777
-
 https://t.me/adept_ua
-
 https://t.me/Za_Derjavy
-
 https://t.me/odeskaODA
-
 https://t.me/OSHP_225
-
 https://t.me/sprava_groma
-
 https://t.me/ua_stalker
-
 https://t.me/hochu_zhyt
-
 https://t.me/warinmyeyes_chat
-
 https://t.me/braty_yakovlevu
-
 https://t.me/TyskNIP
-
 https://t.me/itarmyofukraine2022
-
 https://t.me/atodoneck
-
 https://t.me/dtek_ua
-
 https://t.me/atomiccherry
-
 https://t.me/Ukr_G_M
-
 https://t.me/lost_warinua
-
 https://t.me/khersonskaODA
-
 https://t.me/ua_hero

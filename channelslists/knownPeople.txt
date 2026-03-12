@@ -1,3 +1,13 @@
+# LIST NAME: Known People – Journalists, Analysts and Public Figures
+# POLITICAL BIAS: MIXED (contains pro-Ukrainian, pro-Russian and some independent voices)
+# DESCRIPTION: Personal Telegram channels of war correspondents, military analysts,
+#   political commentators and public figures who cover the Russia-Ukraine conflict.
+#   The list spans the full spectrum: Kremlin-aligned propagandists (e.g. Margarita
+#   Simonyan, Ramzan Kadyrov), Russian nationalist military bloggers (e.g. Igor
+#   Girkin/Strelkov), and pro-Ukrainian journalists and politicians. Treat each
+#   source with awareness of their institutional or ideological affiliation.
+# NOTE: Lines starting with # are ignored by the scraper.
+
 https://t.me/AleksandrSemchenko
 https://t.me/NeoficialniyBeZsonoV
 https://t.me/vrogov
