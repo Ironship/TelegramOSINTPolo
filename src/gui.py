@@ -5,6 +5,7 @@ import threading
 import queue
 import webbrowser
 import os
+import re
 import calendar
 from datetime import date, timedelta, datetime
 from pathlib import Path
@@ -17,6 +18,9 @@ PAD_X = 10
 PAD_Y = 5
 INNER_PAD_X = 5
 INNER_PAD_Y = 5
+
+# Sentinel values that indicate no real list is selected in the dropdown
+_INVALID_LIST_SELECTIONS = ("No lists found", "Error reading lists", "Error scanning lists")
 
 
 class TelegramScraperGUI:
@@ -89,12 +93,30 @@ class TelegramScraperGUI:
             anchor="w", padx=INNER_PAD_X, pady=(INNER_PAD_Y, 0)
         )
         self.channel_list_dropdown = ctk.CTkComboBox(
-            frame, variable=self.channellist_path, state="readonly", width=250
+            frame, variable=self.channellist_path, state="readonly", width=300
         )
         self.channel_list_dropdown.pack(pady=INNER_PAD_Y, padx=INNER_PAD_X)
+
+        # Channel list management buttons
+        mgmt_frame = ctk.CTkFrame(frame, fg_color="transparent")
+        mgmt_frame.pack(pady=(0, INNER_PAD_Y), padx=INNER_PAD_X)
+        self.new_list_button = ctk.CTkButton(
+            mgmt_frame, text="New List", command=self._open_new_list_dialog, width=90
+        )
+        self.new_list_button.pack(side="left", padx=INNER_PAD_X)
+        self.edit_list_button = ctk.CTkButton(
+            mgmt_frame, text="Edit List", command=self._open_edit_list_dialog, width=90
+        )
+        self.edit_list_button.pack(side="left", padx=INNER_PAD_X)
+        self.delete_list_button = ctk.CTkButton(
+            mgmt_frame, text="Delete List", command=self._delete_selected_list,
+            fg_color="#D32F2F", hover_color="#B71C1C", width=90
+        )
+        self.delete_list_button.pack(side="left", padx=INNER_PAD_X)
+
         ctk.CTkLabel(
             frame,
-            text="Select a list. Lists are loaded from 'channelslists' folder.",
+            text="Lists are loaded from the 'channelslists' folder. Use the buttons above to manage them.",
             font=ctk.CTkFont(size=10),
             text_color="gray",
         ).pack(pady=(0, INNER_PAD_Y), padx=INNER_PAD_X)
@@ -313,6 +335,112 @@ class TelegramScraperGUI:
         self.channellist_path.set(default_selection)
 
     # -------------------------------------------------------------------------
+    # Channel list management
+    # -------------------------------------------------------------------------
+
+    def _open_new_list_dialog(self):
+        """Prompt for a name, then open the editor to create a new channel list."""
+        name_dialog = ctk.CTkInputDialog(
+            text="Enter a name for the new list (letters, numbers, underscores and hyphens only):",
+            title="New Channel List"
+        )
+        raw_name = name_dialog.get_input()
+        if not raw_name:
+            return
+        raw_name = raw_name.strip()
+        if not raw_name:
+            return
+        if not re.match(r'^[a-zA-Z0-9_-]+$', raw_name):
+            messagebox.showerror(
+                "Invalid Name",
+                "List name can only contain letters, numbers, underscores and hyphens.\n"
+                "Example: myNewList or pro_Ukrainian_2024"
+            )
+            return
+        filename = f"{raw_name}.txt"
+        filepath = Path(self.base_dir) / "channelslists" / filename
+        if filepath.exists():
+            messagebox.showwarning("Already Exists", f"A list named '{filename}' already exists.\nEdit it instead.")
+            return
+        self._open_channel_list_editor(f"New List: {filename}", filename, "", is_new=True)
+
+    def _open_edit_list_dialog(self):
+        """Open an editor for the currently selected channel list."""
+        selected = self.channellist_path.get().strip()
+        if not selected or selected in _INVALID_LIST_SELECTIONS:
+            messagebox.showwarning("No List Selected", "Please select a valid channel list to edit.")
+            return
+        filepath = Path(self.base_dir) / "channelslists" / selected
+        try:
+            content = filepath.read_text(encoding="utf-8")
+        except (IOError, OSError) as e:
+            messagebox.showerror("Read Error", f"Could not read list file:\n{e}")
+            return
+        self._open_channel_list_editor(f"Edit List: {selected}", selected, content)
+
+    def _open_channel_list_editor(self, title: str, filename: str, initial_content: str = "", is_new: bool = False):
+        """Open a modal dialog to create or edit a channel list file."""
+        channelslists_dir = Path(self.base_dir) / "channelslists"
+        filepath = channelslists_dir / filename
+
+        editor = ctk.CTkToplevel(self.master)
+        editor.title(title)
+        editor.geometry("640x540")
+        editor.grab_set()
+        editor.focus_set()
+
+        ctk.CTkLabel(
+            editor,
+            text=(
+                "Enter one channel per line – full URL (https://t.me/channel) or channel name only.\n"
+                "Lines starting with # are treated as comments and are ignored by the scraper."
+            ),
+            wraplength=610, justify="left", anchor="w",
+        ).pack(pady=(10, 4), padx=12, anchor="w")
+
+        text_box = ctk.CTkTextbox(editor, wrap="word")
+        text_box.pack(fill="both", expand=True, padx=12, pady=(0, 4))
+        text_box.insert("1.0", initial_content)
+        text_box.focus_set()
+
+        def _save():
+            content = text_box.get("1.0", "end-1c")
+            try:
+                channelslists_dir.mkdir(parents=True, exist_ok=True)
+                filepath.write_text(content, encoding="utf-8")
+                action = "Created" if is_new else "Saved"
+                self.log_message(f"{action} channel list: {filename}", "INFO")
+                editor.destroy()
+                self._populate_channel_list_dropdown()
+                self.channellist_path.set(filename)
+            except (IOError, OSError, PermissionError) as e:
+                messagebox.showerror("Save Error", f"Could not save list file:\n{e}", parent=editor)
+
+        btn_frame = ctk.CTkFrame(editor, fg_color="transparent")
+        btn_frame.pack(pady=(4, 10))
+        ctk.CTkButton(btn_frame, text="Save", command=_save, width=120).pack(side="left", padx=10)
+        ctk.CTkButton(btn_frame, text="Cancel", command=editor.destroy, width=120).pack(side="left", padx=10)
+
+    def _delete_selected_list(self):
+        """Delete the currently selected channel list after confirmation."""
+        selected = self.channellist_path.get().strip()
+        if not selected or selected in _INVALID_LIST_SELECTIONS:
+            messagebox.showwarning("No List Selected", "Please select a valid channel list to delete.")
+            return
+        if not messagebox.askyesno(
+            "Confirm Delete",
+            f"Are you sure you want to permanently delete '{selected}'?\nThis cannot be undone."
+        ):
+            return
+        filepath = Path(self.base_dir) / "channelslists" / selected
+        try:
+            filepath.unlink()
+            self.log_message(f"Deleted channel list: {selected}", "INFO")
+            self._populate_channel_list_dropdown()
+        except (IOError, OSError) as e:
+            messagebox.showerror("Delete Error", f"Could not delete list file:\n{e}")
+
+    # -------------------------------------------------------------------------
     # Logging
     # -------------------------------------------------------------------------
 
@@ -422,7 +550,7 @@ class TelegramScraperGUI:
             return
 
         selected_filename = self.channellist_path.get().strip()
-        if not selected_filename or selected_filename in ["No lists found", "Error reading lists", "Error scanning lists"]:
+        if not selected_filename or selected_filename in _INVALID_LIST_SELECTIONS:
             messagebox.showwarning(
                 "Missing Input",
                 "Please select a valid channel list from the dropdown.\n"
@@ -550,7 +678,7 @@ class TelegramScraperGUI:
     def _disable_action_buttons(self):
         for name in [
             'specific_date_button', 'range_date_button', 'today_button', 'yesterday_button', 'all_button',
-            'channel_list_dropdown',
+            'channel_list_dropdown', 'new_list_button', 'edit_list_button', 'delete_list_button',
             'day_spinbox', 'month_spinbox', 'year_spinbox',
             'start_day_spinbox', 'start_month_spinbox', 'start_year_spinbox',
             'end_day_spinbox', 'end_month_spinbox', 'end_year_spinbox',
@@ -561,7 +689,7 @@ class TelegramScraperGUI:
     def _reset_buttons(self):
         for name in [
             'specific_date_button', 'range_date_button', 'today_button', 'yesterday_button', 'all_button',
-            'channel_list_dropdown',
+            'channel_list_dropdown', 'new_list_button', 'edit_list_button', 'delete_list_button',
             'day_spinbox', 'month_spinbox', 'year_spinbox',
             'start_day_spinbox', 'start_month_spinbox', 'start_year_spinbox',
             'end_day_spinbox', 'end_month_spinbox', 'end_year_spinbox',
