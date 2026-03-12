@@ -120,7 +120,9 @@ The workflow:
 3. Builds a standalone Linux binary packaged as a `.deb` file (via PyInstaller on `ubuntu-latest`).
 4. Creates a GitHub Release and attaches both artefacts.
 
-To publish a new release, merge your changes to `main` and then push a version tag:
+#### Option 1 – Push a version tag (recommended)
+
+Merge your changes to `main` and then push a version tag:
 
 ```bash
 git tag v1.0.0
@@ -128,3 +130,12 @@ git push origin v1.0.0
 ```
 
 Replace `v1.0.0` with the appropriate semantic version number.
+
+#### Option 2 – Trigger manually from the GitHub UI
+
+1. Go to **Actions** → **Build and Release** in the GitHub repository.
+2. Click **Run workflow** (top-right of the workflow runs list).
+3. Enter the version number (e.g. `1.0.0`, without the `v` prefix) in the **Release version** field.
+4. Click **Run workflow** to start the build.
+
+Both options run the same pipeline: tests → Windows build → Linux build → GitHub Release.
