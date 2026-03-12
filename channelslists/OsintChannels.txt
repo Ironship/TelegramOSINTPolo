@@ -1,9 +1,41 @@
+# LIST NAME: OSINT Channels – Mixed / Analytical
+# POLITICAL BIAS: MIXED (contains pro-Ukrainian, pro-Russian and neutral sources)
+# DESCRIPTION: Open-source intelligence channels that track the Russia-Ukraine
+#   conflict through geolocation, satellite imagery, and field reporting.
+#   Individual channel biases are noted inline. Use alongside the pro-Russian or
+#   pro-Ukrainian lists for a more balanced picture.
+# NOTE: Lines starting with # are ignored by the scraper.
+
+# --- Neutral / Independent ---
+# osintbees: international OSINT collective, neutral geolocation verification
 https://t.me/osintbees
-https://t.me/DeepStateUA
-https://t.me/rybar
-https://t.me/osint_69
+# arrowsmap: conflict map tracker, no stated bias
 https://t.me/arrowsmap
+# CITeam: Conflict Intelligence Team – Russian investigative OSINT group
 https://t.me/CITeam
+# CIT_shellings: CIT shellings & impact documentation, neutral verification
 https://t.me/CIT_shellings
+# radar_russia_monitor: tracks military movements inside Russia
 https://t.me/radar_russia_monitor
+# control_sigma: OSINT verification, generally neutral
 https://t.me/control_sigma
+# osint_69: general OSINT aggregator, neutral stance
+https://t.me/osint_69
+# geoconfirmed: geolocation confirmation of conflict footage, neutral
+https://t.me/geoconfirmed
+# noelreports: independent documentary journalist reporting from the front
+https://t.me/noelreports
+# intelslava: aggregates open-source intelligence reports (mixed)
+https://t.me/intelslava
+# UAWeapons: tracks weapons systems identified in the conflict, neutral technical
+https://t.me/UAWeapons
+# wararchive: archives conflict footage and documentation, neutral
+https://t.me/wararchive_ua
+
+# --- Pro-Ukrainian leaning (but widely cited in OSINT) ---
+# DeepStateUA: Ukrainian map of conflict lines, maintained by Ukrainian analysts
+https://t.me/DeepStateUA
+
+# --- Pro-Russian leaning (but widely cited in OSINT) ---
+# rybar: Russian military blogger Mikhail Zvinchuk, pro-Russian perspective
+https://t.me/rybar
