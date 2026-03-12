@@ -10,11 +10,15 @@ import threading
 import tempfile
 from datetime import date, datetime, timezone
 from pathlib import Path
+from unittest.mock import patch, MagicMock
 
-from my_telegram_scrapper.models import SimpleTgPost, SimpleTgAuthor
+from my_telegram_scrapper.models import SimpleTgPost, SimpleTgAuthor, ScrapedPage
 from src.scraper import (
+    ARCHIVE_DIR_NAME,
     CUTOFF_DATE,
+    archive_old_output_files,
     load_channels,
+    run_scraping,
     _determine_date_range,
     _write_post_to_file,
     _process_scraped_post,
@@ -342,3 +346,160 @@ class TestProcessScrapedPost:
         _, _, created, _ = self._call(post, "date_range", start, end, tmp_path)
         assert len(created) == 1
         assert "2024-03-05" in created[0].name
+
+
+# ---------------------------------------------------------------------------
+# archive_old_output_files
+# ---------------------------------------------------------------------------
+
+class TestArchiveOldOutputFiles:
+    def test_moves_output_files_to_archive_dir(self, tmp_path):
+        (tmp_path / "output_list_2024-01-01.txt").write_text("data")
+        archive_old_output_files(str(tmp_path), _noop_log)
+        archive_dir = tmp_path / ARCHIVE_DIR_NAME
+        assert archive_dir.exists()
+        archived = list(archive_dir.glob("output_list_2024-01-01_*.txt"))
+        assert len(archived) == 1
+
+    def test_original_file_is_removed_from_base_dir(self, tmp_path):
+        (tmp_path / "output_test_2024-02-01.txt").write_text("data")
+        archive_old_output_files(str(tmp_path), _noop_log)
+        assert not (tmp_path / "output_test_2024-02-01.txt").exists()
+
+    def test_no_output_files_does_not_move_anything(self, tmp_path):
+        keep = tmp_path / "somefile.txt"
+        keep.write_text("not an output file")
+        archive_old_output_files(str(tmp_path), _noop_log)
+        # The non-output file must stay where it is
+        assert keep.exists()
+        # archive dir may or may not be created, but it must contain no output files
+        archive_dir = tmp_path / ARCHIVE_DIR_NAME
+        if archive_dir.exists():
+            assert list(archive_dir.glob("output_*.txt")) == []
+
+    def test_multiple_output_files_all_archived(self, tmp_path):
+        for i in range(3):
+            (tmp_path / f"output_list_2024-0{i+1}-01.txt").write_text(f"data{i}")
+        archive_old_output_files(str(tmp_path), _noop_log)
+        archive_dir = tmp_path / ARCHIVE_DIR_NAME
+        assert len(list(archive_dir.glob("output_*.txt"))) == 3
+
+    def test_non_output_txt_files_not_touched(self, tmp_path):
+        keep = tmp_path / "channels.txt"
+        keep.write_text("mychannel")
+        (tmp_path / "output_list_2024-01-01.txt").write_text("data")
+        archive_old_output_files(str(tmp_path), _noop_log)
+        assert keep.exists()
+
+    def test_archived_filename_contains_original_stem(self, tmp_path):
+        (tmp_path / "output_mylist_2024-06-01.txt").write_text("data")
+        archive_old_output_files(str(tmp_path), _noop_log)
+        archive_dir = tmp_path / ARCHIVE_DIR_NAME
+        archived = list(archive_dir.glob("output_mylist_2024-06-01_*.txt"))
+        assert len(archived) == 1
+
+    def test_empty_directory_is_handled_gracefully(self, tmp_path):
+        archive_old_output_files(str(tmp_path), _noop_log)  # should not raise
+
+
+# ---------------------------------------------------------------------------
+# run_scraping
+# ---------------------------------------------------------------------------
+
+def _make_scraped_page(posts=None, next_token=None):
+    return ScrapedPage(posts=posts or [], next_page_token=next_token)
+
+
+def _make_channel_file(tmp_path, channels):
+    p = tmp_path / "channels.txt"
+    p.write_text("\n".join(channels), encoding="utf-8")
+    return str(p)
+
+
+class TestRunScraping:
+    def _stop(self):
+        e = threading.Event()
+        e.set()
+        return e
+
+    def _run(self, tmp_path, mode="today", target_date=None, start_date=None,
+             end_date=None, stop_event=None, mock_page=None):
+        channel_file = _make_channel_file(tmp_path, ["testchannel"])
+        if target_date is None and mode in ("today", "yesterday"):
+            target_date = date.today()
+        if stop_event is None:
+            stop_event = threading.Event()
+        page = mock_page if mock_page is not None else _make_scraped_page()
+        with patch(
+            "my_telegram_scrapper.client.SimpleScraperClient.get_channel_page",
+            return_value=page,
+        ):
+            return run_scraping(
+                channellist_file=channel_file,
+                mode=mode,
+                target_date=target_date,
+                start_date=start_date,
+                end_date=end_date,
+                log_callback=_noop_log,
+                stop_event=stop_event,
+                base_dir=str(tmp_path),
+            )
+
+    def test_returns_list_of_strings(self, tmp_path):
+        result = self._run(tmp_path)
+        assert isinstance(result, list)
+        assert all(isinstance(p, str) for p in result)
+
+    def test_stop_before_archiving_returns_empty(self, tmp_path):
+        result = self._run(tmp_path, stop_event=self._stop())
+        assert result == []
+
+    def test_archives_existing_output_file(self, tmp_path):
+        (tmp_path / "output_channels_2024-01-01.txt").write_text("old data")
+        self._run(tmp_path)
+        assert not (tmp_path / "output_channels_2024-01-01.txt").exists()
+        archived = list((tmp_path / ARCHIVE_DIR_NAME).glob("output_*.txt"))
+        assert len(archived) == 1
+
+    def test_empty_channel_page_produces_no_output_files(self, tmp_path):
+        result = self._run(tmp_path, mode="today")
+        assert result == []
+
+    def test_matching_post_creates_output_file(self, tmp_path):
+        today = date.today()
+        post = _make_post(
+            timestamp=datetime(today.year, today.month, today.day, 10, 0, tzinfo=timezone.utc)
+        )
+        page = _make_scraped_page(posts=[post])
+        result = self._run(tmp_path, mode="today", target_date=today, mock_page=page)
+        assert len(result) == 1
+        assert os.path.exists(result[0])
+
+    def test_invalid_channel_file_raises_file_not_found(self, tmp_path):
+        stop = threading.Event()
+        with pytest.raises(FileNotFoundError):
+            run_scraping(
+                channellist_file=str(tmp_path / "nonexistent.txt"),
+                mode="today",
+                target_date=date.today(),
+                start_date=None,
+                end_date=None,
+                log_callback=_noop_log,
+                stop_event=stop,
+                base_dir=str(tmp_path),
+            )
+
+    def test_bad_date_range_raises_value_error(self, tmp_path):
+        channel_file = _make_channel_file(tmp_path, ["testchannel"])
+        stop = threading.Event()
+        with pytest.raises(ValueError):
+            run_scraping(
+                channellist_file=channel_file,
+                mode="date_range",
+                target_date=None,
+                start_date=None,  # missing required dates
+                end_date=None,
+                log_callback=_noop_log,
+                stop_event=stop,
+                base_dir=str(tmp_path),
+            )

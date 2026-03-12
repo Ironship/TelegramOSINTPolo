@@ -1,6 +1,5 @@
-# TODO:
-* LIST OF CHANNELS ARE RANDOM FOR NOW - TODO REVIEW their correct political BIAS
-* Workflow for deployment .exe files requires fix. I dont have time for that. Maybe later. Sorry
+[![CI](https://github.com/Ironship/TelegramOSINTPolo/actions/workflows/ci.yml/badge.svg)](https://github.com/Ironship/TelegramOSINTPolo/actions/workflows/ci.yml)
+[![Release](https://github.com/Ironship/TelegramOSINTPolo/actions/workflows/release.yml/badge.svg)](https://github.com/Ironship/TelegramOSINTPolo/actions/workflows/release.yml)
 
 # User Manual for the "Download Telegram Posts" Application
 
@@ -91,3 +90,41 @@ This application is used to download posts from Telegram channels and save them 
 
 ## REMEMBER THAT THE RESPONSIBILITY FOR VERIFYING SOURCES LIES SOLELY WITH YOU. THE NUMBERS NEXT TO THE TEXT (1) IN NOTEBOOKLM ARE LINKS TO QUOTATIONS USED BY THE LLM. THE OUTPUT FILES FROM THIS APPLICATION CONTAIN THE POST CONTENT AND A DIRECT LINK TO THE ORIGINAL POST (2) ON TELEGRAM FOR VERIFICATION.
 ![image](https://github.com/user-attachments/assets/3779eb4f-2f3a-4b82-a3e4-1170598bed5f)
+
+---
+
+## Development
+
+### Running the Tests
+
+Install dependencies and run the full test suite:
+
+```bash
+pip install -r requirements.txt
+python -m pytest tests/ -v
+```
+
+There are 89 tests covering the HTML parser, HTTP client, scraper logic, file archiving, and the end-to-end `run_scraping` entry point.
+
+### CI Pipeline
+
+Every push to `main` and every pull-request targeting `main` automatically runs the test suite via the **CI** workflow (`.github/workflows/ci.yml`).
+
+### Building a Release
+
+Releases are built automatically by the **Build and Release** workflow (`.github/workflows/release.yml`) whenever a version tag of the form `v*` is pushed.
+
+The workflow:
+1. Runs the full test suite first — the build is aborted if any test fails.
+2. Builds a standalone Windows `.exe` (via PyInstaller on `windows-latest`).
+3. Builds a standalone Linux binary packaged as a `.deb` file (via PyInstaller on `ubuntu-latest`).
+4. Creates a GitHub Release and attaches both artefacts.
+
+To publish a new release, merge your changes to `main` and then push a version tag:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Replace `v1.0.0` with the appropriate semantic version number.
