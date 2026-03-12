@@ -1,4 +1,4 @@
-name: Build and Release (PyInstaller)
+name: Build and Release
 
 on:
   push:
@@ -10,18 +10,24 @@ on:
 permissions:
   contents: write
 
+env:
+  PYTHON_VERSION: '3.11'
+
 jobs:
-  build-and-release:
+  # -----------------------------------------------------------------------
+  # Windows – produces a standalone .exe
+  # -----------------------------------------------------------------------
+  build-windows:
     runs-on: windows-latest
 
     steps:
       - name: Check out the code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
         run: |
@@ -29,45 +35,118 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Build with PyInstaller (--onedir)
+      - name: Build Windows .exe with PyInstaller
         run: |
-          pyinstaller --onedir --noconfirm --clean `
+          pyinstaller --onefile --noconsole --noconfirm --clean `
+            --collect-all customtkinter `
             --add-data "channelslists;channelslists" `
-            --add-data "my_telegram_scrapper;my_telegram_scrapper" `
-            --add-data "src;src" `
             getTelegram.py
 
-      - name: Prepare Release Artifact Name
-        id: artifact_name
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-exe
+          path: dist/getTelegram.exe
+
+  # -----------------------------------------------------------------------
+  # Linux – produces a .deb package containing a standalone binary
+  # -----------------------------------------------------------------------
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
         run: |
-          $tagName = "${{ github.ref_name }}"
-          $zipFileName = "getTelegram-${tagName}.zip"
-          echo "zip_file_name=$zipFileName" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-        shell: pwsh
+          sudo apt-get update
+          sudo apt-get install -y python3-tk dpkg
 
-      - name: Create ZIP Archive
-        run: Compress-Archive -Path dist/getTelegram/* -DestinationPath dist/${{ steps.artifact_name.outputs.zip_file_name }}
-        shell: pwsh
-
-      - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Upload Release Asset (ZIP)
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: actions/upload-release-asset@v1
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build Linux binary with PyInstaller
+        run: |
+          pyinstaller --onefile --noconfirm --clean \
+            --collect-all customtkinter \
+            --add-data "channelslists:channelslists" \
+            getTelegram.py
+
+      - name: Determine package version
+        id: pkg_version
+        run: |
+          REF="${{ github.ref_name }}"
+          if [[ "$REF" == v* ]]; then
+            VERSION="${REF#v}"
+          else
+            VERSION="0.0.0-dev"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Package as .deb
+        run: |
+          VERSION="${{ steps.pkg_version.outputs.version }}"
+          PKG_DIR="getTelegram_${VERSION}_amd64"
+
+          mkdir -p "${PKG_DIR}/DEBIAN"
+          mkdir -p "${PKG_DIR}/opt/TelegramOSINTPolo/channelslists"
+          mkdir -p "${PKG_DIR}/usr/local/bin"
+
+          cp dist/getTelegram "${PKG_DIR}/opt/TelegramOSINTPolo/getTelegram"
+          chmod +x "${PKG_DIR}/opt/TelegramOSINTPolo/getTelegram"
+
+          # Launcher wrapper so the binary is on PATH
+          printf '#!/bin/sh\nexec /opt/TelegramOSINTPolo/getTelegram "$@"\n' \
+            > "${PKG_DIR}/usr/local/bin/getTelegram"
+          chmod +x "${PKG_DIR}/usr/local/bin/getTelegram"
+
+          printf 'Package: telegramosintpolo\nVersion: %s\nSection: utils\nPriority: optional\nArchitecture: amd64\nMaintainer: Ironship\nDescription: Telegram OSINT Tool\n A GUI tool for scraping and analyzing Telegram channel posts.\n' \
+            "${VERSION}" > "${PKG_DIR}/DEBIAN/control"
+
+          dpkg-deb --build "${PKG_DIR}" "getTelegram-${VERSION}-amd64.deb"
+        shell: bash
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/${{ steps.artifact_name.outputs.zip_file_name }}
-          asset_name: ${{ steps.artifact_name.outputs.zip_file_name }}
-          asset_content_type: application/zip
+          name: linux-deb
+          path: getTelegram-*-amd64.deb
+
+  # -----------------------------------------------------------------------
+  # Release – attaches both artifacts to a GitHub Release on version tags
+  # -----------------------------------------------------------------------
+  release:
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: windows-exe
+          path: release-assets
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: linux-deb
+          path: release-assets
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
