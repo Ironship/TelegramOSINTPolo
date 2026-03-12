@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 1.0.0, without the v prefix)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -114,11 +120,19 @@ jobs:
       - name: Determine package version
         id: pkg_version
         run: |
-          REF="${{ github.ref_name }}"
-          if [[ "$REF" == v* ]]; then
-            VERSION="${REF#v}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            if ! echo "${VERSION}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+([.-][a-zA-Z0-9]+)*$'; then
+              echo "Error: version '${VERSION}' is not a valid semantic version (e.g. 1.0.0)"
+              exit 1
+            fi
           else
-            VERSION="0.0.0-dev"
+            REF="${{ github.ref_name }}"
+            if [[ "$REF" == v* ]]; then
+              VERSION="${REF#v}"
+            else
+              VERSION="0.0.0-dev"
+            fi
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
         shell: bash
@@ -160,6 +174,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Determine tag name
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            if ! echo "${VERSION}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+([.-][a-zA-Z0-9]+)*$'; then
+              echo "Error: version '${VERSION}' is not a valid semantic version (e.g. 1.0.0)"
+              exit 1
+            fi
+            echo "name=v${VERSION}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
@@ -175,6 +203,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.tag.outputs.name }}
           files: release-assets/*
           generate_release_notes: true
         env:
