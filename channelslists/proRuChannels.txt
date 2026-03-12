@@ -1,3 +1,12 @@
+# LIST NAME: Pro-Russian Channels
+# POLITICAL BIAS: PRO-RUSSIAN
+# DESCRIPTION: Telegram channels that report from a pro-Russian perspective on
+#   the Russia-Ukraine conflict. They include Russian military bloggers (milbloggers),
+#   Kremlin-aligned propagandists, separatist figures from the occupied Donbas,
+#   and Russian nationalist commentators. Content often frames Russian military
+#   operations favourably and is critical of Ukraine and Western policies.
+# NOTE: Lines starting with # are ignored by the scraper.
+
 https://t.me/osetin20
 https://t.me/WarZoneInc
 https://t.me/Love_Russia_Beauty

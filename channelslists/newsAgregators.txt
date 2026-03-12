@@ -1,3 +1,12 @@
+# LIST NAME: News Aggregators – Mixed Sources
+# POLITICAL BIAS: MIXED (contains pro-Ukrainian, pro-Russian and independent sources)
+# DESCRIPTION: A broad set of Russian-language and Ukrainian news aggregators,
+#   independent media outlets (many operating in exile), regional outlets, and
+#   international feeds. Includes both Kremlin-critical independent media
+#   (e.g. Meduza, TV Rain) and state-aligned or sympathetic outlets.
+#   Cross-reference multiple sources to counter individual editorial biases.
+# NOTE: Lines starting with # are ignored by the scraper.
+
 https://t.me/ToBeOrChat
 https://t.me/ejdailyru
 https://t.me/radiotrek

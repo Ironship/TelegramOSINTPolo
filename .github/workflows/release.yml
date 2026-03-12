@@ -76,11 +76,19 @@ jobs:
             --add-data "channelslists;channelslists" `
             getTelegram.py
 
+      - name: Create Windows release zip (exe + channelslists folder)
+        run: |
+          New-Item -ItemType Directory -Force -Path release-windows | Out-Null
+          Copy-Item dist\getTelegram.exe release-windows\
+          Copy-Item -Recurse channelslists release-windows\channelslists
+          Compress-Archive -Path release-windows\* -DestinationPath getTelegram-windows.zip
+        shell: powershell
+
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-exe
-          path: dist/getTelegram.exe
+          name: windows-zip
+          path: getTelegram-windows.zip
 
   # -----------------------------------------------------------------------
   # Linux – produces a .deb package containing a standalone binary
@@ -149,6 +157,9 @@ jobs:
           cp dist/getTelegram "${PKG_DIR}/opt/TelegramOSINTPolo/getTelegram"
           chmod +x "${PKG_DIR}/opt/TelegramOSINTPolo/getTelegram"
 
+          # Copy default channel lists into the deb package
+          cp channelslists/*.txt "${PKG_DIR}/opt/TelegramOSINTPolo/channelslists/"
+
           # Launcher wrapper so the binary is on PATH
           printf '#!/bin/sh\nexec /opt/TelegramOSINTPolo/getTelegram "$@"\n' \
             > "${PKG_DIR}/usr/local/bin/getTelegram"
@@ -191,7 +202,7 @@ jobs:
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
-          name: windows-exe
+          name: windows-zip
           path: release-assets
 
       - name: Download Linux artifact
